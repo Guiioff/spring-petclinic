@@ -91,10 +91,22 @@ class VisitController {
 			return "pets/createOrUpdateVisitForm";
 		}
 
+		Pet pet = owner.getPet(petId);
+		if (hasVisitOnSameDay(pet, visit)) {
+			result.rejectValue("date", "visit.duplicateDate");
+			return "pets/createOrUpdateVisitForm";
+		}
+
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	private boolean hasVisitOnSameDay(Pet pet, Visit newVisit) {
+		return pet.getVisits().stream()
+			.filter(visit -> visit != newVisit)
+			.anyMatch(visit -> visit.getDate().equals(newVisit.getDate()));
 	}
 
 }
