@@ -21,6 +21,10 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -49,9 +53,11 @@ class OwnerController {
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
 	private final OwnerRepository owners;
+	private final OwnerReportPdfService pdfService;
 
-	public OwnerController(OwnerRepository owners) {
+	public OwnerController(OwnerRepository owners, OwnerReportPdfService pdfService) {
 		this.owners = owners;
+		this.pdfService = pdfService;
 	}
 
 	@InitBinder
@@ -168,6 +174,20 @@ class OwnerController {
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
 		mav.addObject(owner);
 		return mav;
+	}
+
+	@GetMapping("owners/{ownerId}/report")
+	public ResponseEntity<byte[]> exportOwnerReport(@PathVariable("ownerId") int ownerId) {
+		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
+		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
+			"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+
+		byte[] pdf = pdfService.generateOwnerReport(owner);
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_PDF);
+		headers.setContentDispositionFormData("filename", "owner-report-" + ownerId + ".pdf");
+		return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
 	}
 
 }
